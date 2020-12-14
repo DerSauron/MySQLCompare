@@ -81,11 +81,26 @@ public class ResultTab extends javax.swing.JPanel
 			outputABScrollArea.getVerticalScrollBar().getModel());
 		outputABScrollArea.getVerticalScrollBar().setUnitIncrement(lineHeight);
 		outputBAScrollArea.getVerticalScrollBar().setUnitIncrement(lineHeight);
-		outputBAScrollArea.getHorizontalScrollBar().setModel(
-			outputABScrollArea.getHorizontalScrollBar().getModel());
 
 		selectDiffCheckItemStateChanged(null);
 		showBABtnActionPerformed(null);
+
+		jSplitPane2.setDividerLocation(0.5);
+		backupSliderPosition = jSplitPane2.getDividerLocation();
+		handleSliderPosition();
+	}
+
+	private void handleSliderPosition()
+	{
+		if (showBABtn.isSelected())
+		{
+			jSplitPane2.setDividerLocation(backupSliderPosition);
+		}
+		else
+		{
+			backupSliderPosition = jSplitPane2.getDividerLocation();
+			jSplitPane2.setDividerLocation(Integer.MAX_VALUE);
+		}
 	}
 
 	private void addStylesToDocument(StyledDocument doc)
@@ -108,7 +123,7 @@ public class ResultTab extends javax.swing.JPanel
 
 	private void load()
 	{
-		final BlockDialog block = new BlockDialog(mainFrame);
+		final BlockDialog block = new BlockDialog(comparisonTab.getMainFrame());
 
 		final SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>()
 		{
@@ -118,7 +133,7 @@ public class ResultTab extends javax.swing.JPanel
 				block.showAsync();
 
 				Compare compare = new Compare(conManager);
-				UserInteraction interactor = new SwingUserInteraction(mainFrame);
+				UserInteraction interactor = new SwingUserInteraction(comparisonTab);
 
 				try
 				{
@@ -487,17 +502,19 @@ public class ResultTab extends javax.swing.JPanel
 
         directionBtns = new javax.swing.ButtonGroup();
         jSplitPane1 = new javax.swing.JSplitPane();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        changeList = new javax.swing.JList<>();
+        jSplitPane2 = new javax.swing.JSplitPane();
+        jPanel3 = new javax.swing.JPanel();
+        outputABLabel = new javax.swing.JLabel();
+        outputABScrollArea = new javax.swing.JScrollPane();
+        outputABNoWrap = new javax.swing.JPanel();
+        outputAB = new javax.swing.JTextPane();
         jPanel2 = new javax.swing.JPanel();
-        jLabel2 = new javax.swing.JLabel();
         outputBALabel = new javax.swing.JLabel();
         outputBAScrollArea = new javax.swing.JScrollPane();
         outputBANoWrap = new javax.swing.JPanel();
         outputBA = new javax.swing.JTextPane();
-        outputABScrollArea = new javax.swing.JScrollPane();
-        outputABNoWrap = new javax.swing.JPanel();
-        outputAB = new javax.swing.JTextPane();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        changeList = new javax.swing.JList<>();
         jPanel1 = new javax.swing.JPanel();
         refreshButton = new javax.swing.JButton();
         selectACheck = new javax.swing.JCheckBox();
@@ -520,14 +537,46 @@ public class ResultTab extends javax.swing.JPanel
         jSplitPane1.setResizeWeight(0.3);
         jSplitPane1.setMinimumSize(new java.awt.Dimension(500, 500));
 
-        jPanel2.setLayout(new java.awt.GridBagLayout());
+        changeList.setFont(new java.awt.Font("Monospaced", 0, 12)); // NOI18N
+        changeList.addListSelectionListener(new javax.swing.event.ListSelectionListener()
+        {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt)
+            {
+                changeListValueChanged(evt);
+            }
+        });
+        jScrollPane1.setViewportView(changeList);
 
-        jLabel2.setText("A -> B");
+        jSplitPane1.setLeftComponent(jScrollPane1);
+
+        jSplitPane2.setDividerLocation(400);
+        jSplitPane2.setResizeWeight(0.5);
+
+        jPanel3.setLayout(new java.awt.GridBagLayout());
+
+        outputABLabel.setText("A -> B");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        jPanel2.add(jLabel2, gridBagConstraints);
+        jPanel3.add(outputABLabel, gridBagConstraints);
+
+        outputABNoWrap.setLayout(new java.awt.BorderLayout());
+        outputABNoWrap.add(outputAB, java.awt.BorderLayout.CENTER);
+
+        outputABScrollArea.setViewportView(outputABNoWrap);
+
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.weighty = 1.0;
+        jPanel3.add(outputABScrollArea, gridBagConstraints);
+
+        jSplitPane2.setLeftComponent(jPanel3);
+
+        jPanel2.setLayout(new java.awt.GridBagLayout());
 
         outputBALabel.setText("B -> A");
         gridBagConstraints = new java.awt.GridBagConstraints();
@@ -549,32 +598,9 @@ public class ResultTab extends javax.swing.JPanel
         gridBagConstraints.weighty = 1.0;
         jPanel2.add(outputBAScrollArea, gridBagConstraints);
 
-        outputABNoWrap.setLayout(new java.awt.BorderLayout());
-        outputABNoWrap.add(outputAB, java.awt.BorderLayout.CENTER);
+        jSplitPane2.setRightComponent(jPanel2);
 
-        outputABScrollArea.setViewportView(outputABNoWrap);
-
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 1;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.weighty = 1.0;
-        jPanel2.add(outputABScrollArea, gridBagConstraints);
-
-        jSplitPane1.setRightComponent(jPanel2);
-
-        changeList.setFont(new java.awt.Font("Monospaced", 0, 12)); // NOI18N
-        changeList.addListSelectionListener(new javax.swing.event.ListSelectionListener()
-        {
-            public void valueChanged(javax.swing.event.ListSelectionEvent evt)
-            {
-                changeListValueChanged(evt);
-            }
-        });
-        jScrollPane1.setViewportView(changeList);
-
-        jSplitPane1.setLeftComponent(jScrollPane1);
+        jSplitPane1.setRightComponent(jSplitPane2);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -674,7 +700,7 @@ public class ResultTab extends javax.swing.JPanel
                 .addComponent(doFilterBtn)
                 .addGap(18, 18, 18)
                 .addComponent(showBABtn)
-                .addContainerGap(448, Short.MAX_VALUE))
+                .addContainerGap(486, Short.MAX_VALUE))
         );
 
         gridBagConstraints = new java.awt.GridBagConstraints();
@@ -712,8 +738,9 @@ public class ResultTab extends javax.swing.JPanel
 
     private void showBABtnActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_showBABtnActionPerformed
     {//GEN-HEADEREND:event_showBABtnActionPerformed
-        boolean selected = showBABtn.isSelected();
+		handleSliderPosition();
 
+        boolean selected = showBABtn.isSelected();
 		outputBALabel.setVisible(selected);
 		outputBAScrollArea.setVisible(selected);
     }//GEN-LAST:event_showBABtnActionPerformed
@@ -724,12 +751,14 @@ public class ResultTab extends javax.swing.JPanel
     private javax.swing.ButtonGroup directionBtns;
     private javax.swing.JButton doFilterBtn;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JSplitPane jSplitPane1;
+    private javax.swing.JSplitPane jSplitPane2;
     private javax.swing.JTextPane outputAB;
+    private javax.swing.JLabel outputABLabel;
     private javax.swing.JPanel outputABNoWrap;
     private javax.swing.JScrollPane outputABScrollArea;
     private javax.swing.JTextPane outputBA;
