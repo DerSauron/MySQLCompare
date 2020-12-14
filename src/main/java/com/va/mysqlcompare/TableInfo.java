@@ -81,6 +81,8 @@ public class TableInfo implements NamedObject
 		}
 		final TableInfo other = (TableInfo)obj;
 		return Objects.equals(this.name, other.name)
-			&& Objects.equals(this.createStatement, other.createStatement);
+			&& Objects.equals(this.engine, other.engine)
+			&& Objects.equals(this.charset, other.charset)
+			&& Objects.equals(this.collation, other.collation);
 	}
 }

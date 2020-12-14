@@ -201,6 +201,9 @@ public class ResultTab extends javax.swing.JPanel
 			case RIGHT_ONLY:
 				listModel.addElement(new ListEntry(tableDiff, "TABLE `" + tableDiff.getTableInfoB().getName() + "` only exists in B"));
 				break;
+			case DIFFERENT:
+				listModel.addElement(new ListEntry(tableDiff, "TABLE `" + tableDiff.getTableInfoB().getName() + "` differs in A and B"));
+				break;
 		}
 	}
 
