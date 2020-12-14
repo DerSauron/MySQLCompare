@@ -78,14 +78,18 @@ public class DataStorePasswordStore implements PasswordStore
 			dataStore.putData(KEY_MASTER_PASSWORD_SALT, salt);
 		}
 
-		char[] password = ui.getPassword("Master password");
-
-		cryptoKey = new SecretKeySpec(PasswordUtils.hashPassword(password, salt), CIPHER_ALGORITHM_BASE);
-
-		open = testOpen(PasswordUtils.hashPassword(toChars(cryptoKey.getEncoded()), salt));
-
-		if (!open)
+		while (true)
 		{
+			char[] password = ui.getPassword("Master password");
+			if (password == null)
+				break;
+
+			cryptoKey = new SecretKeySpec(PasswordUtils.hashPassword(password, salt), CIPHER_ALGORITHM_BASE);
+
+			open = testOpen(PasswordUtils.hashPassword(toChars(cryptoKey.getEncoded()), salt));
+			if (open)
+				break;
+
 			ui.showErrorMessage("Could not open password store: Wrong master password.", null);
 		}
 
