@@ -30,15 +30,15 @@ public class DatabaseSelectorTab extends javax.swing.JPanel
 	private static final long serialVersionUID = 1L;
 	private static final Logger LOG = LoggerFactory.getLogger(DatabaseSelectorTab.class);
 
-	private final MainFrame mainFrame;
+	private final ComparisonTab comparionTab;
 	private final ConnectionsManager conManager;
 
 	private boolean aSelected = false;
 	private boolean bSelected = false;
 
-	public DatabaseSelectorTab(MainFrame mainFrame, ConnectionsManager conManager)
+	public DatabaseSelectorTab(ComparisonTab comparisonTab, ConnectionsManager conManager)
 	{
-		this.mainFrame = mainFrame;
+		this.comparionTab = comparisonTab;
 		this.conManager = conManager;
 
 		initComponents();
@@ -48,7 +48,7 @@ public class DatabaseSelectorTab extends javax.swing.JPanel
 
 	private void load()
 	{
-		final BlockDialog block = new BlockDialog(mainFrame);
+		final BlockDialog block = new BlockDialog(comparionTab.getMainFrame());
 
 		serverAHeader.setText("Databases from server " + conManager.getServerA() + " (A)");
 		serverBHeader.setText("Databases from server " + conManager.getServerB() + " (B)");
@@ -62,14 +62,14 @@ public class DatabaseSelectorTab extends javax.swing.JPanel
 				{
 					block.showAsync();
 
-					final UserInteraction interactor = new SwingUserInteraction(mainFrame);
+					final UserInteraction interactor = new SwingUserInteraction(comparionTab);
 
 					if (!conManager.connect(interactor))
 					{
 						conManager.close();
 						SwingUtilities.invokeLater(() ->
 						{
-							mainFrame.removeTab(DatabaseSelectorTab.this);
+							comparionTab.removeTab(DatabaseSelectorTab.this);
 						});
 						return null;
 					}
@@ -166,8 +166,8 @@ public class DatabaseSelectorTab extends javax.swing.JPanel
 
 		if (databaseA != null && databaseB != null)
 		{
-			mainFrame.addTab(databaseA + " <-> " + databaseB,
-				new ResultTab(mainFrame, conManager, databaseA, databaseB));
+			comparionTab.addTab(databaseA + " <-> " + databaseB,
+				new ResultTab(comparionTab, conManager, databaseA, databaseB));
 		}
 	}
 

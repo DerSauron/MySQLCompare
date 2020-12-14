@@ -173,7 +173,7 @@ public class NewCompareDialog extends javax.swing.JDialog
 
 		ConnectionsManager conManager = new ConnectionsManager(cia, cib, passwordStore);
 
-		getMainFrame().addTab(cia + " <-> " + cib, new DatabaseSelectorTab(getMainFrame(), conManager));
+		getMainFrame().addTab(cia + " <-> " + cib, new ComparisonTab(getMainFrame(), conManager));
 
 		dispose();
     }//GEN-LAST:event_compareButtonActionPerformed
