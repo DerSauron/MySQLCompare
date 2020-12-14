@@ -21,9 +21,7 @@ import com.va.mysqlcompare.CompareResult.KeyDiff;
 import com.va.mysqlcompare.CompareResult.ProcedureDiff;
 import com.va.mysqlcompare.CompareResult.TableDiff;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -44,15 +42,19 @@ public class Compare
 	{
 		State state = new State(conManager, databaseA, databaseB);
 
-		DBOReader reader1 = new DBOReader(state.getConnection(State.Side.A));
-		DBOReader reader2 = new DBOReader(state.getConnection(State.Side.B));
+		compareTables(state);
+		compareProcedures(state);
 
-		NamedObjectList<TableInfo> tables1 = reader1.readTables(state.getDatabase(State.Side.A));
-		NamedObjectList<TableInfo> tables2 = reader2.readTables(state.getDatabase(State.Side.B));
+		return state.compareResult;
+	}
+
+	private void compareTables(State state) throws SQLException
+	{
+		NamedObjectList<TableInfo> tables1 = state.getReader(Side.A).readTables(state.getDatabase(Side.A));
+		NamedObjectList<TableInfo> tables2 = state.getReader(Side.A).readTables(state.getDatabase(Side.B));
 
 		for (TableInfo tableInfo : tables1)
 		{
-//            LOG.info("Scanning table {}", tableName);
 			if (tables2.contains(tableInfo.getName()))
 			{
 				boolean tableChildrenEquals = true;
@@ -74,6 +76,8 @@ public class Compare
 					if (!tableInfo.equals(tableInfo2))
 					{
 						state.compareResult.addDiff(new TableDiff(Diff.Mode.DIFFERENT, tableInfo, tableInfo2));
+
+						LOG.debug("Table {} differs in A and B", tableInfo.getName());
 					}
 					else
 					{
@@ -95,7 +99,6 @@ public class Compare
 
 		for (TableInfo tableInfo : tables2)
 		{
-//            LOG.info("Scanning table {}", tableName);
 			if (!tables1.contains(tableInfo.getName()))
 			{
 				state.compareResult.addDiff(new TableDiff(Diff.Mode.RIGHT_ONLY, null, tableInfo));
@@ -103,9 +106,12 @@ public class Compare
 				LOG.debug("Table {} only in B", tableInfo.getName());
 			}
 		}
+	}
 
-		NamedObjectList<ProcedureInfo> procedures1 = loadProcedures(state, State.Side.A);
-		NamedObjectList<ProcedureInfo> procedures2 = loadProcedures(state, State.Side.B);
+	private void compareProcedures(State state) throws SQLException
+	{
+		NamedObjectList<ProcedureInfo> procedures1 = state.getReader(Side.A).readProcedures(state.getDatabase(Side.A));
+		NamedObjectList<ProcedureInfo> procedures2 = state.getReader(Side.B).readProcedures(state.getDatabase(Side.B));
 
 		for (ProcedureInfo procedureInfo : procedures1)
 		{
@@ -113,13 +119,16 @@ public class Compare
 			{
 				if (!procedureInfo.equals(procedures2.get(procedureInfo.getName())))
 				{
-					state.compareResult.addDiff(new ProcedureDiff(Diff.Mode.DIFFERENT, procedureInfo, procedures2.get(procedureInfo.getName())));
+					state.compareResult.addDiff(new ProcedureDiff(Diff.Mode.DIFFERENT, procedureInfo,
+						procedures2.get(procedureInfo.getName())));
 
-					LOG.debug("Procedure {} (A) differs from {} (B)", procedureInfo.getName(), procedures2.get(procedureInfo.getName()).getName());
+					LOG.debug("Procedure {} (A) differs from {} (B)", procedureInfo.getName(),
+						procedures2.get(procedureInfo.getName()).getName());
 				}
 				else
 				{
-					state.compareResult.addDiff(new ProcedureDiff(Diff.Mode.EQUAL, procedureInfo, procedures2.get(procedureInfo.getName())));
+					state.compareResult.addDiff(new ProcedureDiff(Diff.Mode.EQUAL, procedureInfo,
+						procedures2.get(procedureInfo.getName())));
 				}
 			}
 			else
@@ -139,14 +148,12 @@ public class Compare
 				LOG.debug("Procedure {} only in B", procedureInfo.getName());
 			}
 		}
-
-		return state.compareResult;
 	}
 
 	private boolean compareFields(State state, String tableName) throws SQLException
 	{
-		NamedObjectList<FieldInfo> fields1 = loadFields(state, State.Side.A, tableName);
-		NamedObjectList<FieldInfo> fields2 = loadFields(state, State.Side.B, tableName);
+		NamedObjectList<FieldInfo> fields1 = state.getReader(Side.A).readFields(state.getDatabase(Side.A), tableName);
+		NamedObjectList<FieldInfo> fields2 = state.getReader(Side.B).readFields(state.getDatabase(Side.B), tableName);
 
 		boolean allFieldsEqual = true;
 
@@ -161,7 +168,8 @@ public class Compare
 					allFieldsEqual = false;
 					state.compareResult.addDiff(new FieldDiff(Diff.Mode.DIFFERENT, field, field2));
 
-					LOG.debug("Field {}.{} (A) differs from {}.{} (B)", tableName, field.getName(), tableName, field2.getName());
+					LOG.debug("Field {}.{} (A) differs from {}.{} (B)",
+						tableName, field.getName(), tableName, field2.getName());
 				}
 				else
 				{
@@ -191,28 +199,10 @@ public class Compare
 		return allFieldsEqual;
 	}
 
-	private NamedObjectList<FieldInfo> loadFields(State state, State.Side side, String tableName)
-		throws SQLException
-	{
-		NamedObjectList<FieldInfo> fields = new NamedObjectList<>();
-		try (Statement stmt = state.getConnection(side).createStatement())
-		{
-			ResultSet result = stmt.executeQuery("SHOW FULL FIELDS FROM `" + state.getDatabase(side)
-				+ "`.`" + tableName + "`");
-			String lastFieldName = null;
-			while (result.next())
-			{
-				fields.add(new FieldInfo(tableName, result, lastFieldName));
-				lastFieldName = result.getString(1);
-			}
-		}
-		return fields;
-	}
-
 	private boolean compareKeys(State state, String tableName) throws SQLException
 	{
-		HashMap<String, KeyInfo> keys1 = loadKeys(state, State.Side.A, tableName);
-		HashMap<String, KeyInfo> keys2 = loadKeys(state, State.Side.B, tableName);
+		HashMap<String, KeyInfo> keys1 = state.getReader(Side.A).readKeys(state.getDatabase(Side.A), tableName);
+		HashMap<String, KeyInfo> keys2 = state.getReader(Side.B).readKeys(state.getDatabase(Side.B), tableName);
 
 		boolean allKeysEqual = true;
 
@@ -256,68 +246,18 @@ public class Compare
 		return allKeysEqual;
 	}
 
-	private HashMap<String, KeyInfo> loadKeys(State state, State.Side side, String tableName)
-		throws SQLException
+	private enum Side
 	{
-		HashMap<String, KeyInfo> keys = new HashMap<>();
-		try (Statement stmt = state.getConnection(side).createStatement())
-		{
-			ResultSet result = stmt.executeQuery("SHOW KEYS FROM `" + state.getDatabase(side)
-				+ "`.`" + tableName + "`");
-			while (result.next())
-			{
-				keys.put(result.getString("Key_name").toLowerCase(), new KeyInfo(result));
-			}
-		}
-		return keys;
-	}
-
-	private NamedObjectList<ProcedureInfo> loadProcedures(State state, State.Side side) throws SQLException
-	{
-		NamedObjectList<ProcedureInfo> tables = new NamedObjectList<>();
-		try (Statement stmt = state.getConnection(side).createStatement())
-		{
-			ResultSet result = stmt.executeQuery(
-				"SHOW FUNCTION STATUS WHERE Db = '" + state.getDatabase(side) + "'");
-			while (result.next())
-			{
-				try (Statement stmt2 = state.getConnection(side).createStatement())
-				{
-					ResultSet result2 = stmt2.executeQuery("SHOW CREATE FUNCTION `"
-						+ state.getDatabase(side) + "`.`" + result.getString("Name") + "`");
-					result2.next();
-					String query = result2.getString(3);
-					tables.add(new ProcedureInfo(result.getString("Name"), result.getString("Type"), query));
-				}
-			}
-			result = stmt.executeQuery(
-				"SHOW PROCEDURE STATUS WHERE Db = '" + state.getDatabase(side) + "'");
-			while (result.next())
-			{
-				try (Statement stmt2 = state.getConnection(side).createStatement())
-				{
-					ResultSet result2 = stmt2.executeQuery("SHOW CREATE PROCEDURE `"
-						+ state.getDatabase(side) + "`.`" + result.getString("Name") + "`");
-					result2.next();
-					String query = result2.getString(3);
-					tables.add(new ProcedureInfo(result.getString("Name"), result.getString("Type"), query));
-				}
-			}
-		}
-		return tables;
+		A, B
 	}
 
 	private static class State
 	{
-		public enum Side
-		{
-			A,
-			B
-		}
-
 		public final ConnectionsManager conManager;
 		public final String databaseA;
 		public final String databaseB;
+		public final DBOReader readerA;
+		public final DBOReader readerB;
 		public final CompareResult compareResult;
 
 		public State(ConnectionsManager conManager, String databaseA, String databaseB)
@@ -325,10 +265,12 @@ public class Compare
 			this.conManager = conManager;
 			this.databaseA = databaseA;
 			this.databaseB = databaseB;
+			readerA = new DBOReader(getConnection(Side.A));
+			readerB = new DBOReader(getConnection(Side.B));
 			this.compareResult = new CompareResult(databaseA, databaseB);
 		}
 
-		public Connection getConnection(Side side)
+		public final Connection getConnection(Side side)
 		{
 			switch (side)
 			{
@@ -349,6 +291,19 @@ public class Compare
 					return databaseA;
 				case B:
 					return databaseB;
+				default:
+					return null;
+			}
+		}
+
+		public DBOReader getReader(Side side)
+		{
+			switch (side)
+			{
+				case A:
+					return readerA;
+				case B:
+					return readerB;
 				default:
 					return null;
 			}

@@ -19,6 +19,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,22 +37,91 @@ public class DBOReader
 		NamedObjectList<TableInfo> tables = new NamedObjectList<>();
 		try (Statement stmt = connection.createStatement())
 		{
-			ResultSet result = stmt.executeQuery("SHOW TABLES FROM `" + databaseName + "`");
+			ResultSet result = stmt.executeQuery("SHOW FULL TABLES FROM `" + databaseName + "`");
 			while (result.next())
 			{
+				if (!result.getString(2).equals("BASE_TABLE"))
+					continue;
+
 				try (Statement stmt2 = connection.createStatement())
 				{
 					ResultSet result2 = stmt2.executeQuery(
 						"SHOW CREATE TABLE `" + databaseName + "`.`" + result.getString(1) + "`");
 					result2.next();
 
-					String query = result2.getString(2);
+					String name = result2.getString(1);
+					String dde = result2.getString(2);
 
-					tables.add(parseTableInfo(result2.getString(1), result2.getString(2)));
+					tables.add(parseTableInfo(name, dde));
 				}
 			}
 		}
 		return tables;
+	}
+
+	NamedObjectList<FieldInfo> readFields(String databaseName, String tableName) throws SQLException
+	{
+		NamedObjectList<FieldInfo> fields = new NamedObjectList<>();
+		try (Statement stmt = connection.createStatement())
+		{
+			ResultSet result = stmt.executeQuery("SHOW FULL FIELDS FROM `" + databaseName + "`.`" + tableName + "`");
+			String lastFieldName = null;
+			while (result.next())
+			{
+				fields.add(new FieldInfo(tableName, result, lastFieldName));
+				lastFieldName = result.getString(1);
+			}
+		}
+		return fields;
+	}
+
+	HashMap<String, KeyInfo> readKeys(String databaseName, String tableName) throws SQLException
+	{
+		HashMap<String, KeyInfo> keys = new HashMap<>();
+		try (Statement stmt = connection.createStatement())
+		{
+			ResultSet result = stmt.executeQuery("SHOW KEYS FROM `" + databaseName + "`.`" + tableName + "`");
+			while (result.next())
+			{
+				keys.put(result.getString("Key_name").toLowerCase(), new KeyInfo(result));
+			}
+		}
+		return keys;
+	}
+
+	NamedObjectList<ProcedureInfo> readProcedures(String databaseName) throws SQLException
+	{
+		NamedObjectList<ProcedureInfo> procedures = new NamedObjectList<>();
+		try (Statement stmt = connection.createStatement())
+		{
+			ResultSet result = stmt.executeQuery(
+				"SHOW FUNCTION STATUS WHERE Db = '" + databaseName + "'");
+			while (result.next())
+			{
+				try (Statement stmt2 = connection.createStatement())
+				{
+					ResultSet result2 = stmt2.executeQuery("SHOW CREATE FUNCTION `" + databaseName + "`.`" +
+						result.getString("Name") + "`");
+					result2.next();
+					String query = result2.getString(3);
+					procedures.add(new ProcedureInfo(result.getString("Name"), result.getString("Type"), query));
+				}
+			}
+			result = stmt.executeQuery(
+				"SHOW PROCEDURE STATUS WHERE Db = '" + databaseName + "'");
+			while (result.next())
+			{
+				try (Statement stmt2 = connection.createStatement())
+				{
+					ResultSet result2 = stmt2.executeQuery("SHOW CREATE PROCEDURE `" + databaseName + "`.`" +
+						result.getString("Name") + "`");
+					result2.next();
+					String query = result2.getString(3);
+					procedures.add(new ProcedureInfo(result.getString("Name"), result.getString("Type"), query));
+				}
+			}
+		}
+		return procedures;
 	}
 
 	private TableInfo parseTableInfo(String name, String info)
