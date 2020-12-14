@@ -20,6 +20,7 @@ import com.va.mysqlcompare.CompareResult.FieldDiff;
 import com.va.mysqlcompare.CompareResult.KeyDiff;
 import com.va.mysqlcompare.CompareResult.ProcedureDiff;
 import com.va.mysqlcompare.CompareResult.TableDiff;
+import com.va.mysqlcompare.CompareResult.ViewDiff;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -43,6 +44,7 @@ public class Compare
 		State state = new State(conManager, databaseA, databaseB);
 
 		compareTables(state);
+		compareViews(state);
 		compareProcedures(state);
 
 		return state.compareResult;
@@ -104,6 +106,48 @@ public class Compare
 				state.compareResult.addDiff(new TableDiff(Diff.Mode.RIGHT_ONLY, null, tableInfo));
 
 				LOG.debug("Table {} only in B", tableInfo.getName());
+			}
+		}
+	}
+
+	private void compareViews(State state) throws SQLException
+	{
+		NamedObjectList<ViewInfo> views1 = state.getReader(Side.A).readViews(state.getDatabase(Side.A));
+		NamedObjectList<ViewInfo> views2 = state.getReader(Side.B).readViews(state.getDatabase(Side.B));
+
+		for (ViewInfo viewInfo : views1)
+		{
+			if (views2.contains(viewInfo.getName()))
+			{
+				if (!viewInfo.equals(views2.get(viewInfo.getName())))
+				{
+					state.compareResult.addDiff(new ViewDiff(Diff.Mode.DIFFERENT, viewInfo,
+						views2.get(viewInfo.getName())));
+
+					LOG.debug("View {} (A) differs from {} (B)", viewInfo.getName(),
+						views2.get(viewInfo.getName()).getName());
+				}
+				else
+				{
+					state.compareResult.addDiff(new ViewDiff(Diff.Mode.EQUAL, viewInfo,
+						views2.get(viewInfo.getName())));
+				}
+			}
+			else
+			{
+				state.compareResult.addDiff(new ViewDiff(Diff.Mode.LEFT_ONLY, viewInfo, null));
+
+				LOG.debug("View {} only in A", viewInfo.getName());
+			}
+		}
+
+		for (ViewInfo viewInfo : views2)
+		{
+			if (!views1.contains(viewInfo.getName()))
+			{
+				state.compareResult.addDiff(new ViewDiff(Diff.Mode.RIGHT_ONLY, null, viewInfo));
+
+				LOG.debug("View {} only in B", viewInfo.getName());
 			}
 		}
 	}

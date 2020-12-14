@@ -23,6 +23,7 @@ import com.va.mysqlcompare.CompareResult.FieldDiff;
 import com.va.mysqlcompare.CompareResult.KeyDiff;
 import com.va.mysqlcompare.CompareResult.ProcedureDiff;
 import com.va.mysqlcompare.CompareResult.TableDiff;
+import com.va.mysqlcompare.CompareResult.ViewDiff;
 import java.awt.Color;
 import java.sql.SQLException;
 import java.util.List;
@@ -39,23 +40,27 @@ import javax.swing.text.StyleContext;
 import javax.swing.text.StyledDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static com.va.mysqlcompare.CompareResult.Diff.Mode.DIFFERENT;
+import static com.va.mysqlcompare.CompareResult.Diff.Mode.LEFT_ONLY;
+import static com.va.mysqlcompare.CompareResult.Diff.Mode.RIGHT_ONLY;
 
 public class ResultTab extends javax.swing.JPanel
 {
 	private static final long serialVersionUID = 1L;
 	private static final Logger LOG = LoggerFactory.getLogger(ResultTab.class);
 
-	private final MainFrame mainFrame;
+	private final ComparisonTab comparisonTab;
 	private final ConnectionsManager conManager;
 	private final String databaseA;
 	private final String databaseB;
+	private int backupSliderPosition = 0;
 	private CompareResult result;
 	private DDERenderer previewRenderer;
 
-	public ResultTab(MainFrame mainFrame, ConnectionsManager conManager, String databaseA,
+	public ResultTab(ComparisonTab comparisonTab, ConnectionsManager conManager, String databaseA,
 		String databaseB)
 	{
-		this.mainFrame = mainFrame;
+		this.comparisonTab = comparisonTab;
 		this.conManager = conManager;
 		this.databaseA = databaseA;
 		this.databaseB = databaseB;
@@ -163,6 +168,9 @@ public class ResultTab extends javax.swing.JPanel
 				case TABLE:
 					addTableDiff(listModel, (TableDiff)diff);
 					break;
+				case VIEW:
+					addViewDiff(listModel, (ViewDiff)diff);
+					break;
 				case FIELD:
 					addFieldDiff(listModel, (FieldDiff)diff);
 					break;
@@ -192,6 +200,22 @@ public class ResultTab extends javax.swing.JPanel
 				break;
 			case RIGHT_ONLY:
 				listModel.addElement(new ListEntry(tableDiff, "TABLE `" + tableDiff.getTableInfoB().getName() + "` only exists in B"));
+				break;
+		}
+	}
+
+	private void addViewDiff(DefaultListModel<ListEntry> listModel, ViewDiff viewDiff)
+	{
+		switch (viewDiff.getMode())
+		{
+			case LEFT_ONLY:
+				listModel.addElement(new ListEntry(viewDiff, "VIEW  `" + viewDiff.getViewInfoA().getName() + "` only exists in A"));
+				break;
+			case RIGHT_ONLY:
+				listModel.addElement(new ListEntry(viewDiff, "VIEW  `" + viewDiff.getViewInfoB().getName() + "` only exists in B"));
+				break;
+			case DIFFERENT:
+				listModel.addElement(new ListEntry(viewDiff, "VIEW  `" + viewDiff.getViewInfoA().getName() + "` differs in A and B"));
 				break;
 		}
 	}

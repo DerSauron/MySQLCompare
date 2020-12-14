@@ -59,6 +59,33 @@ public class DBOReader
 		return tables;
 	}
 
+	NamedObjectList<ViewInfo> readViews(String databaseName) throws SQLException
+	{
+		NamedObjectList<ViewInfo> views = new NamedObjectList<>();
+		try (Statement stmt = connection.createStatement())
+		{
+			ResultSet result = stmt.executeQuery("SHOW FULL TABLES FROM `" + databaseName + "`");
+			while (result.next())
+			{
+				if (!result.getString(2).equals("VIEW"))
+					continue;
+
+				try (Statement stmt2 = connection.createStatement())
+				{
+					ResultSet result2 = stmt2.executeQuery(
+						"SHOW CREATE VIEW `" + databaseName + "`.`" + result.getString(1) + "`");
+					result2.next();
+
+					String name = result2.getString(1);
+					String dde = result2.getString(2);
+
+					views.add(new ViewInfo(name, dde));
+				}
+			}
+		}
+		return views;
+	}
+
 	NamedObjectList<FieldInfo> readFields(String databaseName, String tableName) throws SQLException
 	{
 		NamedObjectList<FieldInfo> fields = new NamedObjectList<>();

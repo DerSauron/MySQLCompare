@@ -63,6 +63,7 @@ public class CompareResult implements Serializable
 		public enum Type
 		{
 			TABLE,
+			VIEW,
 			FIELD,
 			KEY,
 			PROCEDURE,
@@ -232,4 +233,29 @@ public class CompareResult implements Serializable
 		}
 	}
 
+	public static class ViewDiff extends Diff
+	{
+		private static final long serialVersionUID = 1L;
+
+		private final ViewInfo viewInfoA;
+		private final ViewInfo viewInfoB;
+
+		public ViewDiff(Diff.Mode type, ViewInfo viewInfoA, ViewInfo viewInfoB)
+		{
+			super(Diff.Type.VIEW, type);
+
+			this.viewInfoA = viewInfoA;
+			this.viewInfoB = viewInfoB;
+		}
+
+		public ViewInfo getViewInfoA()
+		{
+			return viewInfoA;
+		}
+
+		public ViewInfo getViewInfoB()
+		{
+			return viewInfoB;
+		}
+	}
 }

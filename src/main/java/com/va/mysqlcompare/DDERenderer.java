@@ -20,9 +20,13 @@ import com.va.mysqlcompare.CompareResult.FieldDiff;
 import com.va.mysqlcompare.CompareResult.KeyDiff;
 import com.va.mysqlcompare.CompareResult.ProcedureDiff;
 import com.va.mysqlcompare.CompareResult.TableDiff;
+import com.va.mysqlcompare.CompareResult.ViewDiff;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static com.va.mysqlcompare.CompareResult.Diff.Mode.DIFFERENT;
+import static com.va.mysqlcompare.CompareResult.Diff.Mode.LEFT_ONLY;
+import static com.va.mysqlcompare.CompareResult.Diff.Mode.RIGHT_ONLY;
 
 public class DDERenderer
 {
@@ -59,6 +63,9 @@ public class DDERenderer
 		{
 			case TABLE:
 				renderTableDiff(writer, (TableDiff)diff, reverse);
+				break;
+			case VIEW:
+				renderViewDiff(writer, (ViewDiff)diff, reverse);
 				break;
 			case FIELD:
 				renderFieldDiff(writer, (FieldDiff)diff, reverse);
@@ -131,6 +138,41 @@ public class DDERenderer
 		sb.append(";");
 
 		writer.println(sb.toString());
+	}
+
+	private void renderViewDiff(OutputWriter writer, ViewDiff viewDiff, boolean reverse)
+	{
+		switch (viewDiff.getMode())
+		{
+			case LEFT_ONLY:
+				renderViewInfo(writer, viewDiff.getViewInfoA(), reverse);
+				break;
+
+			case RIGHT_ONLY:
+				renderViewInfo(writer, viewDiff.getViewInfoB(), !reverse);
+				break;
+
+			case DIFFERENT:
+			{
+				ViewInfo viewInfo
+					= !reverse ? viewDiff.getViewInfoA() : viewDiff.getViewInfoB();
+				renderViewInfo(writer, viewInfo, true);
+				renderViewInfo(writer, viewInfo, false);
+				break;
+			}
+		}
+	}
+
+	private void renderViewInfo(OutputWriter writer, ViewInfo viewDiff, boolean drop)
+	{
+		if (drop)
+		{
+			writer.println("DROP VIEW `" + viewDiff.getName() + "`;");
+		}
+		else
+		{
+			writer.println(viewDiff.getCreateStatement() + ";");
+		}
 	}
 
 	private void renderFieldDiff(OutputWriter writer, FieldDiff fieldDiff, boolean reverse)
@@ -322,9 +364,14 @@ public class DDERenderer
 
 	private void renderProcedureInfo(OutputWriter writer, ProcedureInfo procedureDiff, boolean drop)
 	{
-		writer.println(drop
-			? "DROP " + procedureDiff.getType() + " `" + procedureDiff.getName() + "`;"
-			: procedureDiff.getCreateStatement() + ";");
+		if (drop)
+		{
+			writer.println("DROP " + procedureDiff.getType() + " `" + procedureDiff.getName() + "`;");
+		}
+		else
+		{
+			writer.println("DELIMITER $$\n" + procedureDiff.getCreateStatement() + "$$\nDELIMITER ;");
+		}
 	}
 
 	private String getCreateKeyQuery(KeyInfo keyInfo)
