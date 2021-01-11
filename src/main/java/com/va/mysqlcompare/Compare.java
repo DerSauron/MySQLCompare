@@ -53,7 +53,7 @@ public class Compare
 	private void compareTables(State state) throws SQLException
 	{
 		NamedObjectList<TableInfo> tables1 = state.getReader(Side.A).readTables(state.getDatabase(Side.A));
-		NamedObjectList<TableInfo> tables2 = state.getReader(Side.A).readTables(state.getDatabase(Side.B));
+		NamedObjectList<TableInfo> tables2 = state.getReader(Side.B).readTables(state.getDatabase(Side.B));
 
 		for (TableInfo tableInfo : tables1)
 		{
@@ -61,17 +61,17 @@ public class Compare
 			{
 				boolean tableChildrenEquals = true;
 
-				if (!compareFields(state, tableInfo.getName()))
-				{
-					tableChildrenEquals = false;
-				}
-
-				if (!compareKeys(state, tableInfo.getName()))
-				{
-					tableChildrenEquals = false;
-				}
-
 				TableInfo tableInfo2 = tables2.get(tableInfo.getName());
+
+				if (!compareFields(state, tableInfo.getName(), tableInfo2.getName()))
+				{
+					tableChildrenEquals = false;
+				}
+
+				if (!compareKeys(state, tableInfo.getName(), tableInfo2.getName()))
+				{
+					tableChildrenEquals = false;
+				}
 
 				if (tableChildrenEquals)
 				{
@@ -194,10 +194,10 @@ public class Compare
 		}
 	}
 
-	private boolean compareFields(State state, String tableName) throws SQLException
+	private boolean compareFields(State state, String tableNameA, String tableNameB) throws SQLException
 	{
-		NamedObjectList<FieldInfo> fields1 = state.getReader(Side.A).readFields(state.getDatabase(Side.A), tableName);
-		NamedObjectList<FieldInfo> fields2 = state.getReader(Side.B).readFields(state.getDatabase(Side.B), tableName);
+		NamedObjectList<FieldInfo> fields1 = state.getReader(Side.A).readFields(state.getDatabase(Side.A), tableNameA);
+		NamedObjectList<FieldInfo> fields2 = state.getReader(Side.B).readFields(state.getDatabase(Side.B), tableNameB);
 
 		boolean allFieldsEqual = true;
 
@@ -213,7 +213,7 @@ public class Compare
 					state.compareResult.addDiff(new FieldDiff(Diff.Mode.DIFFERENT, field, field2));
 
 					LOG.debug("Field {}.{} (A) differs from {}.{} (B)",
-						tableName, field.getName(), tableName, field2.getName());
+						tableNameA, field.getName(), tableNameB, field2.getName());
 				}
 				else
 				{
@@ -225,7 +225,7 @@ public class Compare
 				allFieldsEqual = false;
 				state.compareResult.addDiff(new FieldDiff(Diff.Mode.LEFT_ONLY, field, null));
 
-				LOG.debug("Field {}.{} only in A", tableName, field.getName());
+				LOG.debug("Field {}.{} only in A", tableNameA, field.getName());
 			}
 		}
 
@@ -236,17 +236,17 @@ public class Compare
 				allFieldsEqual = false;
 				state.compareResult.addDiff(new FieldDiff(Diff.Mode.RIGHT_ONLY, null, field));
 
-				LOG.debug("Field {}.{} only in B", tableName, field.getName());
+				LOG.debug("Field {}.{} only in B", tableNameB, field.getName());
 			}
 		}
 
 		return allFieldsEqual;
 	}
 
-	private boolean compareKeys(State state, String tableName) throws SQLException
+	private boolean compareKeys(State state, String tableNameA, String tableNameB) throws SQLException
 	{
-		HashMap<String, KeyInfo> keys1 = state.getReader(Side.A).readKeys(state.getDatabase(Side.A), tableName);
-		HashMap<String, KeyInfo> keys2 = state.getReader(Side.B).readKeys(state.getDatabase(Side.B), tableName);
+		HashMap<String, KeyInfo> keys1 = state.getReader(Side.A).readKeys(state.getDatabase(Side.A), tableNameA);
+		HashMap<String, KeyInfo> keys2 = state.getReader(Side.B).readKeys(state.getDatabase(Side.B), tableNameB);
 
 		boolean allKeysEqual = true;
 
@@ -258,7 +258,7 @@ public class Compare
 				allKeysEqual = false;
 				state.compareResult.addDiff(new KeyDiff(Diff.Mode.RIGHT_ONLY, null, entry.getValue()));
 
-				LOG.debug("Key {}.{} only in B", tableName, entry.getValue().getName());
+				LOG.debug("Key {}.{} only in B", tableNameB, entry.getValue().getName());
 			}
 		}
 
@@ -271,7 +271,8 @@ public class Compare
 					allKeysEqual = false;
 					state.compareResult.addDiff(new KeyDiff(Diff.Mode.DIFFERENT, entry.getValue(), keys2.get(entry.getKey())));
 
-					LOG.debug("Key {}.{} (A) differs from {}.{} (B)", tableName, entry.getValue().getName(), tableName, keys2.get(entry.getKey()).getName());
+					LOG.debug("Key {}.{} (A) differs from {}.{} (B)", tableNameA, entry.getValue().getName(),
+						tableNameB, keys2.get(entry.getKey()).getName());
 				}
 				else
 				{
@@ -283,7 +284,7 @@ public class Compare
 				allKeysEqual = false;
 				state.compareResult.addDiff(new KeyDiff(Diff.Mode.LEFT_ONLY, entry.getValue(), null));
 
-				LOG.debug("Key {}.{} only in A", tableName, entry.getValue().getName());
+				LOG.debug("Key {}.{} only in A", tableNameA, entry.getValue().getName());
 			}
 		}
 
