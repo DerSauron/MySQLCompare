@@ -122,17 +122,17 @@ public class DDERenderer
 
 		if (!t1.getEngine().equals(t2.getEngine()))
 		{
-			sb.append("ENGINE=").append(t1.getEngine());
+			sb.append("ENGINE=").append(t1.getEngine()).append(" ");
 		}
 
 		if (!t1.getCharset().equals(t2.getCharset()))
 		{
-			sb.append("CHARSET=").append(t1.getCharset());
+			sb.append("CHARSET=").append(t1.getCharset()).append(" ");
 		}
 
 		if (!t1.getCollation().equals(t2.getCollation()))
 		{
-			sb.append("COLLATE=").append(t1.getCollation());
+			sb.append("COLLATE=").append(t1.getCollation()).append(" ");
 		}
 
 		sb.append(";");
