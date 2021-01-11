@@ -40,7 +40,7 @@ public class DBOReader
 			ResultSet result = stmt.executeQuery("SHOW FULL TABLES FROM `" + databaseName + "`");
 			while (result.next())
 			{
-				if (!result.getString(2).equals("BASE_TABLE"))
+				if (!result.getString(2).equals("BASE TABLE"))
 					continue;
 
 				try (Statement stmt2 = connection.createStatement())
