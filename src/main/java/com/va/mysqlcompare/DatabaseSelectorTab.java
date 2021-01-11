@@ -20,6 +20,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import javax.swing.DefaultListModel;
+import javax.swing.JList;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import org.slf4j.Logger;
@@ -152,6 +153,22 @@ public class DatabaseSelectorTab extends javax.swing.JPanel
 		};
 
 		loadDatabasesWorker.execute();
+	}
+
+	private void tryAutoSelect(JList<String> listA, JList<String> listB)
+	{
+		String valueA = listA.getSelectedValue();
+		if (valueA == null)
+			return;
+
+		for (int i = 0; i < listB.getModel().getSize(); ++i)
+		{
+			if (valueA.equals(listB.getModel().getElementAt(i)))
+			{
+				listB.setSelectedValue(valueA, true);
+				break;
+			}
+		}
 	}
 
 	private void updateCompareButton()
@@ -310,12 +327,14 @@ public class DatabaseSelectorTab extends javax.swing.JPanel
     private void serverADatabasesValueChanged(javax.swing.event.ListSelectionEvent evt)//GEN-FIRST:event_serverADatabasesValueChanged
     {//GEN-HEADEREND:event_serverADatabasesValueChanged
 		aSelected = serverADatabases.getSelectedIndex() != -1;
+		tryAutoSelect(serverADatabases, serverBDatabases);
 		updateCompareButton();
     }//GEN-LAST:event_serverADatabasesValueChanged
 
     private void serverBDatabasesValueChanged(javax.swing.event.ListSelectionEvent evt)//GEN-FIRST:event_serverBDatabasesValueChanged
     {//GEN-HEADEREND:event_serverBDatabasesValueChanged
 		bSelected = serverBDatabases.getSelectedIndex() != -1;
+		tryAutoSelect(serverBDatabases, serverADatabases);
 		updateCompareButton();
     }//GEN-LAST:event_serverBDatabasesValueChanged
 
