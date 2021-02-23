@@ -50,12 +50,11 @@ public class FieldInfo implements NamedObject, Serializable
 		this.tableName = tableName;
 		name = result.getString("COLUMN_NAME");
 		this.previousFieldName = previousFieldName;
-		
+
 		decodeType(result.getString("COLUMN_TYPE"));
 		collation = result.getString("COLLATION_NAME");
 		nullValue = "YES".equalsIgnoreCase(result.getString("IS_NULLABLE"));
-		final String defVal = result.getString("COLUMN_DEFAULT");
-		defaultValue = ((defVal == null) || "NULL".equals(defVal)) ? null : defVal;
+		defaultValue = result.getString("COLUMN_DEFAULT");
 		autoIncrement = getExtraFlag(result.getString("EXTRA"), "auto_increment") != -1;
 
 		final int generationFlag = getExtraFlag(result.getString("EXTRA"), "STORED GENERATED", "VIRTUAL GENERATED");

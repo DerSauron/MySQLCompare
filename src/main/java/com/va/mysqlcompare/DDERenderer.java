@@ -293,25 +293,11 @@ public class DDERenderer
 		}
 		colDef.append("NULL ");
 
-		if (fieldInfo.isNull() || (fieldInfo.getDefault() != null))
+		if (fieldInfo.getDefault() != null)
 		{
 			colDef.append("DEFAULT ");
-			try
-			{
-				if (fieldInfo.getDefault() == null)
-				{
-					colDef.append("NULL ");
-				}
-				else
-				{
-					Double.parseDouble(fieldInfo.getDefault());
-					colDef.append(fieldInfo.getDefault()).append(" ");
-				}
-			}
-			catch (NumberFormatException e)
-			{
-				colDef.append("'").append(fieldInfo.getDefault()).append("' ");
-			}
+			colDef.append(fieldInfo.getDefault());
+			colDef.append(" ");
 		}
 
 		if (fieldInfo.isAutoIncrement())
