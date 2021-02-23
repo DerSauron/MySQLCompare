@@ -24,6 +24,13 @@ import java.util.regex.Pattern;
 
 public class FieldInfo implements NamedObject, Serializable
 {
+	public enum GenerationType
+	{
+		NONE,
+		STORED,
+		VIRTUAL,
+	}
+
 	private static final long serialVersionUID = 1L;
 	private final String tableName;
 	private final String name;
@@ -31,20 +38,39 @@ public class FieldInfo implements NamedObject, Serializable
 	private String type;
 	private Integer length;
 	private final String collation;
-	private final boolean null0;
-	private final String default0;
+	private final boolean nullValue;
+	private final String defaultValue;
 	private final boolean autoIncrement;
+	private final GenerationType generationType;
+	private final String generationExpression;
+	private final boolean generationUniqueKey;
 
 	public FieldInfo(String tableName, ResultSet result, String previousFieldName) throws SQLException
 	{
 		this.tableName = tableName;
-		name = result.getString("Field");
+		name = result.getString("COLUMN_NAME");
 		this.previousFieldName = previousFieldName;
-		decodeType(result.getString("Type"));
-		collation = result.getString("Collation");
-		null0 = "YES".equalsIgnoreCase(result.getString("Null"));
-		default0 = result.getString("Default");
-		autoIncrement = getExtraFlag(result.getString("Extra"), "auto_increment");
+		
+		decodeType(result.getString("COLUMN_TYPE"));
+		collation = result.getString("COLLATION_NAME");
+		nullValue = "YES".equalsIgnoreCase(result.getString("IS_NULLABLE"));
+		final String defVal = result.getString("COLUMN_DEFAULT");
+		defaultValue = ((defVal == null) || "NULL".equals(defVal)) ? null : defVal;
+		autoIncrement = getExtraFlag(result.getString("EXTRA"), "auto_increment") != -1;
+
+		final int generationFlag = getExtraFlag(result.getString("EXTRA"), "STORED GENERATED", "VIRTUAL GENERATED");
+		if (generationFlag != -1)
+		{
+			generationType = GenerationType.values()[generationFlag + 1];
+			generationExpression = result.getString("GENERATION_EXPRESSION");
+			generationUniqueKey = getExtraFlag(result.getString("COLUMN_KEY"), "UNI") != -1;
+		}
+		else
+		{
+			generationType = GenerationType.NONE;
+			generationExpression = null;
+			generationUniqueKey = false;
+		}
 	}
 
 	private void decodeType(String type0) throws SQLException
@@ -76,9 +102,19 @@ public class FieldInfo implements NamedObject, Serializable
 		}
 	}
 
-	private boolean getExtraFlag(String extra, String flag)
+	private int getExtraFlag(String extra, String... flags)
 	{
-		return extra != null && extra.contains(flag);
+		if (extra == null)
+			return -1;
+
+		int i = 0;
+		for (String flag : flags)
+		{
+			if (extra.contains(flag))
+				return i;
+		}
+
+		return -1;
 	}
 
 	public String getTableName()
@@ -114,17 +150,32 @@ public class FieldInfo implements NamedObject, Serializable
 
 	public boolean isNull()
 	{
-		return null0;
+		return nullValue;
 	}
 
 	public String getDefault()
 	{
-		return default0;
+		return defaultValue;
 	}
 
 	public boolean isAutoIncrement()
 	{
 		return autoIncrement;
+	}
+
+	public GenerationType getGenerationType()
+	{
+		return generationType;
+	}
+
+	public String getGenerationExpression()
+	{
+		return generationExpression;
+	}
+
+	public boolean isGenerationUniqueKey()
+	{
+		return generationUniqueKey;
 	}
 
 	@Override
@@ -135,8 +186,8 @@ public class FieldInfo implements NamedObject, Serializable
 		hash = 17 * hash + Objects.hashCode(this.type);
 		hash = 17 * hash + Objects.hashCode(this.length);
 		hash = 17 * hash + Objects.hashCode(this.collation);
-		hash = 17 * hash + (this.null0 ? 1 : 0);
-		hash = 17 * hash + Objects.hashCode(this.default0);
+		hash = 17 * hash + (this.nullValue ? 1 : 0);
+		hash = 17 * hash + Objects.hashCode(this.defaultValue);
 		return hash;
 	}
 
@@ -165,11 +216,11 @@ public class FieldInfo implements NamedObject, Serializable
 				return false;
 			}
 		}
-		if (this.null0 != other.null0)
+		if (this.nullValue != other.nullValue)
 		{
 			return false;
 		}
-		return Objects.equals(this.default0, other.default0);
+		return Objects.equals(this.defaultValue, other.defaultValue);
 	}
 
 	public boolean collationEquals(FieldInfo other)

@@ -243,6 +243,7 @@ public class DDERenderer
 	private String buildColumnDef(FieldInfo fieldInfo, boolean singleTerm)
 	{
 		StringBuilder colDef = new StringBuilder();
+
 		colDef.append("`")
 			.append(fieldInfo.getName())
 			.append("` ")
@@ -254,6 +255,32 @@ public class DDERenderer
 		}
 		colDef.append(" ");
 
+		if (fieldInfo.getGenerationType() == FieldInfo.GenerationType.NONE)
+		{
+			appendNormalColumnDef(colDef, fieldInfo);
+		}
+		else
+		{
+			appendGeneratedColumnDef(colDef, fieldInfo);
+		}
+
+		if (singleTerm)
+		{
+			if (fieldInfo.getPreviousFieldName() == null)
+			{
+				colDef.append("FIRST ");
+			}
+			else
+			{
+				colDef.append("AFTER `").append(fieldInfo.getPreviousFieldName()).append("` ");
+			}
+		}
+
+		return colDef.toString();
+	}
+
+	private void appendNormalColumnDef(StringBuilder colDef, FieldInfo fieldInfo)
+	{
 		if (fieldInfo.getCollation() != null)
 		{
 			colDef.append("COLLATE ").append(fieldInfo.getCollation());
@@ -286,22 +313,32 @@ public class DDERenderer
 				colDef.append("'").append(fieldInfo.getDefault()).append("' ");
 			}
 		}
+
 		if (fieldInfo.isAutoIncrement())
 		{
 			colDef.append("AUTO_INCREMENT ");
 		}
-		if (singleTerm)
+	}
+
+	private void appendGeneratedColumnDef(StringBuilder colDef, FieldInfo fieldInfo)
+	{
+		colDef.append("GENERATED ALWAYS AS (");
+		colDef.append(fieldInfo.getGenerationExpression());
+		colDef.append(") ");
+
+		switch (fieldInfo.getGenerationType())
 		{
-			if (fieldInfo.getPreviousFieldName() == null)
-			{
-				colDef.append("FIRST ");
-			}
-			else
-			{
-				colDef.append("AFTER `").append(fieldInfo.getPreviousFieldName()).append("` ");
-			}
+			case STORED:
+				colDef.append("PERSISTENT ");
+				break;
+
+			case VIRTUAL:
+				colDef.append("VIRTUAL ");
+				break;
 		}
-		return colDef.toString();
+
+		if (fieldInfo.isGenerationUniqueKey())
+			colDef.append("UNIQUE KEY ");
 	}
 
 	private void renderKeyDiff(OutputWriter writer, KeyDiff keyDiff, boolean reverse)

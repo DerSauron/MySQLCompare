@@ -91,12 +91,14 @@ public class DBOReader
 		NamedObjectList<FieldInfo> fields = new NamedObjectList<>();
 		try (Statement stmt = connection.createStatement())
 		{
-			ResultSet result = stmt.executeQuery("SHOW FULL FIELDS FROM `" + databaseName + "`.`" + tableName + "`");
+			ResultSet result = stmt.executeQuery("SELECT * FROM information_schema.columns WHERE  table_name = '" +
+				tableName + "' AND table_schema = '" + databaseName + "' ORDER BY ORDINAL_POSITION");
 			String lastFieldName = null;
 			while (result.next())
 			{
-				fields.add(new FieldInfo(tableName, result, lastFieldName));
-				lastFieldName = result.getString(1);
+				final FieldInfo fieldInfo = new FieldInfo(tableName, result, lastFieldName);
+				fields.add(fieldInfo);
+				lastFieldName = fieldInfo.getName();
 			}
 		}
 		return fields;
